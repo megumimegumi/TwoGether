@@ -1,0 +1,25 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="360dp"
+    android:height="260dp"
+    android:viewportWidth="360"
+    android:viewportHeight="260">
+    <!-- 暖光咖啡店 -->
+    <path android:pathData="M0,0h360v260h-360z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0" android:startY="0"
+                android:endX="0" android:endY="260"
+                android:startColor="#FFFFE0C2"
+                android:centerColor="#FFE8B89A"
+                android:endColor="#FFC98F78" />
+        </aapt:attr>
+    </path>
+    <path android:fillColor="#CCFFF9F7" android:pathData="M148,86h64v10c0,22 -64,22 -64,0Z" />
+    <path android:fillColor="#FF8B5E4B" android:pathData="M120,86a60,60 0,0 1,120 0v6a60,60 0,0 1,-120 0Z" />
+    <path android:fillColor="#FFF6E7CE" android:pathData="M104,86a76,76 0,0 1,152 0v8a76,76 0,0 1,-152 0Z" />
+    <path android:fillColor="#CCFFFFFF" android:pathData="M0,196 Q90,184 180,196 T360,196 L360,260 L0,260 Z" />
+    <path android:fillColor="#CCFFF9F7" android:pathData="M60,40m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0" />
+    <path android:fillColor="#CCFFF9F7" android:pathData="M300,34m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0" />
+</vector>

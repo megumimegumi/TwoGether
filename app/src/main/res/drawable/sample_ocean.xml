@@ -1,0 +1,25 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="360dp"
+    android:height="260dp"
+    android:viewportWidth="360"
+    android:viewportHeight="260">
+    <!-- 海与星空 -->
+    <path android:pathData="M0,0h360v260h-360z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0" android:startY="0"
+                android:endX="0" android:endY="260"
+                android:startColor="#FFB8D8EA"
+                android:centerColor="#FF7FA8C9"
+                android:endColor="#FF4A6FA5" />
+        </aapt:attr>
+    </path>
+    <path android:fillColor="#FFFFE9B8" android:pathData="M270,46m-20,0a20,20 0,1 1,40 0a20,20 0,1 1,-40 0" />
+    <path android:fillColor="#CCFFF9F7" android:pathData="M60,60m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0" />
+    <path android:fillColor="#CCFFF9F7" android:pathData="M110,96m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0" />
+    <path android:fillColor="#CCFFF9F7" android:pathData="M200,80m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0" />
+    <path android:fillColor="#99FFFFFF" android:pathData="M0,150 Q50,140 100,150 T200,150 T300,150 T360,150 L360,260 L0,260 Z" />
+    <path android:fillColor="#667FA8C9" android:pathData="M0,180 Q60,170 120,180 T240,180 T360,180 L360,260 L0,260 Z" />
+</vector>

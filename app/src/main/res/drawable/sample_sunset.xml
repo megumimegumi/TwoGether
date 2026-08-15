@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="360dp"
+    android:height="260dp"
+    android:viewportWidth="360"
+    android:viewportHeight="260">
+    <!-- 海边落日 -->
+    <path android:pathData="M0,0h360v260h-360z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0" android:startY="0"
+                android:endX="0" android:endY="260"
+                android:startColor="#FFFFD3A5"
+                android:centerColor="#FFFF9A8B"
+                android:endColor="#FFC3A6FF" />
+        </aapt:attr>
+    </path>
+    <path android:fillColor="#FFFFE9B8" android:pathData="M180,170m-34,0a34,34 0,1 1,68 0a34,34 0,1 1,-68 0" />
+    <path android:fillColor="#99FF8BA7" android:pathData="M0,190 Q60,178 120,190 T240,190 T360,190 L360,260 L0,260 Z" />
+    <path android:fillColor="#66C3A6FF" android:pathData="M0,212 Q60,202 120,212 T240,212 T360,212 L360,260 L0,260 Z" />
+</vector>

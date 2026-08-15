@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>响应式滚动时间轴 - 这该死的高级感</title>
+    <style>
+        :root {
+            --card-width: 280px;
+            --card-img-height: 180px;
+            --bg-transition: 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            --blur-transition: 0.6s ease;
+            --gold: #c8b48c;
+            --gold-bright: #e8d5a3;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Georgia', 'Noto Serif SC', 'STSong', 'SimSun', serif;
+            background: #0a0a0a;
+            color: #ccc;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        /* ============ 全屏背景层 ============ */
+        .bg-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transition: background-image var(--bg-transition);
+            will-change: background-image;
+        }
+
+        .bg-overlay::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            transition: backdrop-filter var(--bg-transition), background var(--bg-transition);
+        }
+
+        /* 当有激活卡片时，背景层遮罩稍微变亮 */
+        body.has-active .bg-overlay::after {
+            background: rgba(0, 0, 0, 0.55);
+        }
+
+        /* ============ 主滚动容器 ============ */
+        .main-container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .scroll-spacer-top { height: 45vh; }
+        .scroll-spacer-bottom { height: 55vh; }
+
+        /* ============ 时间轴中央线 ============ */
+        .timeline {
+            position: relative;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 1.5px;
+            background: linear-gradient(
+                180deg,
+                transparent 0%,
+                rgba(200, 180, 140, 0.15) 8%,
+                rgba(200, 180, 140, 0.6) 25%,
+                rgba(200, 180, 140, 0.75) 50%,
+                rgba(200, 180, 140, 0.6) 75%,
+                rgba(200, 180, 140, 0.15) 92%,
+                transparent 100%
+            );
+            transform: translateX(-50%);
+            z-index: 0;
+        }
+
+        /* ============ 卡片项 ============ */
+        .timeline-item {
+            position: relative;
+            display: flex;
+            align-items: center;
+            margin-bottom: 140px;
+            z-index: 1;
+            transition: filter var(--blur-transition), opacity var(--blur-transition);
+        }
+
+        .timeline-item.left  { flex-direction: row;      padding-right: 53%; }
+        .timeline-item.right { flex-direction: row-reverse; padding-left: 53%; }
+
+        /* ============ 卡片本体 ============ */
+        .card {
+            position: relative;
+            width: var(--card-width);
+            background: rgba(18, 18, 18, 0.9);
+            border: 1px solid rgba(200, 180, 140, 0.15);
+            border-radius: 6px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                        box-shadow 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                        border-color 0.45s ease;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+            border-color: rgba(200, 180, 140, 0.45);
+        }
+
+        .card-img {
+            width: 100%;
+            height: var(--card-img-height);
+            object-fit: cover;
+            display: block;
+            transition: transform 0.7s ease;
+        }
+
+        .card:hover .card-img { transform: scale(1.06); }
+
+        .card-body { padding: 16px 18px 20px; }
+
+        .card-year {
+            font-size: 12px;
+            letter-spacing: 4px;
+            color: var(--gold);
+            margin-bottom: 8px;
+            font-family: 'Georgia', 'Times New Roman', serif;
+        }
+
+        .card-annotation {
+            font-size: 13px;
+            color: #999;
+            line-height: 1.7;
+            font-style: italic;
+        }
+
+        /* ============ 时间轴节点圆点 ============ */
+        .timeline-dot {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 12px;
+            height: 12px;
+            background: var(--gold);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            box-shadow: 0 0 10px rgba(200, 180, 140, 0.4);
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                        box-shadow 0.5s ease,
+                        background 0.5s ease;
+        }
+
+        .timeline-item.active .timeline-dot {
+            transform: translate(-50%, -50%) scale(2);
+            box-shadow: 0 0 30px rgba(200, 180, 140, 0.95), 0 0 60px rgba(200, 180, 140, 0.3);
+            background: var(--gold-bright);
+        }
+
+        /* ============ 浮动文字叠加层（书名） ============ */
+        .floating-title {
+            position: absolute;
+            top: 50%;
+            font-size: 30px;
+            font-weight: bold;
+            color: var(--gold-bright);
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 3;
+            opacity: 0;
+            font-family: 'Georgia', 'Noto Serif SC', 'STKaiti', 'KaiTi', serif;
+            text-shadow: 0 0 40px rgba(200, 180, 140, 0.5);
+            letter-spacing: 6px;
+            transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+                        transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 左卡片 → 书名出现在右侧 */
+        .timeline-item.left .floating-title {
+            left: 56%;
+            transform: translateY(-50%) translateX(-30px);
+        }
+        .timeline-item.left.active .floating-title {
+            opacity: 1;
+            transform: translateY(-50%) translateX(0);
+        }
+
+        /* 右卡片 → 书名出现在左侧 */
+        .timeline-item.right .floating-title {
+            right: 56%;
+            text-align: right;
+            transform: translateY(-50%) translateX(30px);
+        }
+        .timeline-item.right.active .floating-title {
+            opacity: 1;
+            transform: translateY(-50%) translateX(0);
+        }
+
+        /* 书名两边的装饰线 */
+        .floating-title::before,
+        .floating-title::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 40px;
+            height: 1px;
+            background: var(--gold);
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .timeline-item.left .floating-title::before {
+            right: calc(100% + 16px);
+            width: 0;
+        }
+        .timeline-item.left.active .floating-title::before { width: 50px; }
+
+        .timeline-item.right .floating-title::after {
+            left: calc(100% + 16px);
+            width: 0;
+        }
+        .timeline-item.right.active .floating-title::after { width: 50px; }
+
+        /* ============ 模糊效果 ============ */
+        .timeline-item.blurred .card {
+            filter: blur(5px);
+            opacity: 0.4;
+        }
+        .timeline-item.blurred .timeline-dot {
+            opacity: 0.2;
+            transform: translate(-50%, -50%) scale(0.7);
+        }
+
+        .timeline-item.active .card {
+            filter: blur(0);
+            opacity: 1;
+        }
+        .timeline-item.active .timeline-dot { opacity: 1; }
+
+        /* ============ 顶部标题 ============ */
+        .header-title {
+            text-align: center;
+            padding: 80px 20px 30px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header-title h1 {
+            font-size: clamp(26px, 5vw, 46px);
+            color: var(--gold-bright);
+            letter-spacing: 10px;
+            font-weight: normal;
+            font-family: 'Georgia', 'Noto Serif SC', 'STKaiti', 'KaiTi', serif;
+        }
+
+        .header-title .subtitle {
+            font-size: 12px;
+            color: #777;
+            letter-spacing: 8px;
+            margin-top: 14px;
+        }
+
+        /* ============ 响应式 ============ */
+        @media (max-width: 768px) {
+            :root {
+                --card-width: 220px;
+                --card-img-height: 140px;
+            }
+            .timeline::before { left: 20px; }
+            .timeline-item.left,
+            .timeline-item.right {
+                flex-direction: row;
+                padding-left: 50px;
+                padding-right: 10px;
+            }
+            .timeline-dot { left: 20px; }
+            .floating-title { display: none; }
+            .timeline-item { margin-bottom: 70px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-overlay" id="bgOverlay"></div>
+
+    <div class="main-container">
+        <div class="header-title">
+            <h1>时 光 书 架</h1>
+            <div class="subtitle">T I M E L I N E</div>
+        </div>
+
+        <div class="scroll-spacer-top"></div>
+
+        <div class="timeline" id="timeline">
+
+            <!-- 1998 -->
+            <div class="timeline-item left" data-bg="https://picsum.photos/seed/book1998/1920/1080">
+                <div class="card">
+                    <img class="card-img" src="https://picsum.photos/seed/book1998/400/260" alt="1998" loading="lazy">
+                    <div class="card-body">
+                        <div class="card-year">1 9 9 8</div>
+                        <div class="card-annotation">村上春树 · 青春与迷失的森林</div>
+                    </div>
+                </div>
+                <div class="timeline-dot"></div>
+                <div class="floating-title">〈 挪 威 的 森 林 〉</div>
+            </div>
+
+            <!-- 2001 -->
+            <div class="timeline-item right" data-bg="https://picsum.photos/seed/book2001/1920/1080">
+                <div class="card">
+                    <img class="card-img" src="https://picsum.photos/seed/book2001/400/260" alt="2001" loading="lazy">
+                    <div class="card-body">
+                        <div class="card-year">2 0 0 1</div>
+                        <div class="card-annotation">马尔克斯 · 魔幻现实主义的巅峰</div>
+                    </div>
+                </div>
+                <div class="timeline-dot"></div>
+                <div class="floating-title">〈 百 年 孤 独 〉</div>
+            </div>
+
+            <!-- 2003 -->
+            <div class="timeline-item left" data-bg="https://picsum.photos/seed/book2003/1920/1080">
+                <div class="card">
+                    <img class="card-img" src="https://picsum.photos/seed/book2003/400/260" alt="2003" loading="lazy">
+                    <div class="card-body">
+                        <div class="card-year">2 0 0 3</div>
+                        <div class="card-annotation">村上春树 · 少年与命运的对峙</div>
+                    </div>
+                </div>
+                <div class="timeline-dot"></div>
+                <div class="floating-title">〈 海 边 的 卡 夫 卡 〉</div>
+            </div>
+
+            <!-- 2006 -->
+            <div class="timeline-item right" data-bg="https://picsum.photos/seed/book2006/1920/1080">
+                <div class="card">
+                    <img class="card-img" src="https://picsum.photos/seed/book2006/400/260" alt="2006" loading="lazy">
+                    <div class="card-body">
+                        <div class="card-year">2 0 0 6</div>
+                        <div class="card-annotation">卡勒德·胡赛尼 · 为你，千千万万遍</div>
+                    </div>
+                </div>
+                <div class="timeline-dot"></div>
+                <div class="floating-title">〈 追 风 筝 的 人 〉</div>
+            </div>
+
+            <!-- 2009 -->
+            <div class="timeline-item left" data-bg="https://picsum.photos/seed/book2009/1920/1080">
+                <div class="card">
+                    <img class="card-img" src="https://picsum.photos/seed/book2009/400/260" alt="2009" loading="lazy">
+                    <div class="card-body">
+                        <div class="card-year">2 0 0 9</div>
+                        <div class="card-annotation">村上春树 · 两个月亮的世界</div>
+                    </div>
+                </div>
+                <div class="timeline-dot"></div>
+                <div class="floating-title">〈 1 Q 8 4 〉</div>
+            </div>
+
+            <!-- 2011 -->
+            <div class="timeline-item right" data-bg="https://picsum.photos/seed/book2011/1920/1080">
+                <div class="card">
+                    <img class="card-img" src="https://picsum.photos/seed/book2011/400/260" alt="2011" loading="lazy">
+                    <div class="card-body">
+                        <div class="card-year">2 0 1 1</div>
+                        <div class="card-annotation">川端康成 · 穿过县界长长的隧道</div>
+                    </div>
+                </div>
+                <div class="timeline-dot"></div>
+                <div class="floating-title">〈 雪 国 〉</div>
+            </div>
+
+            <!-- 2014 -->
+            <div class="timeline-item left" data-bg="https://picsum.photos/seed/book2014/1920/1080">
+                <div class="card">
+                    <img class="card-img" src="https://picsum.photos/seed/book2014/400/260" alt="2014" loading="lazy">
+                    <div class="card-body">
+                        <div class="card-year">2 0 1 4</div>
+                        <div class="card-annotation">东野圭吾 · 跨越时空的书信</div>
+                    </div>
+                </div>
+                <div class="timeline-dot"></div>
+                <div class="floating-title">〈 解 忧 杂 货 店 〉</div>
+            </div>
+
+            <!-- 2017 -->
+            <div class="timeline-item right" data-bg="https://picsum.photos/seed/book2017/1920/1080">
+                <div class="card">
+                    <img class="card-img" src="https://picsum.photos/seed/book2017/400/260" alt="2017" loading="lazy">
+                    <div class="card-body">
+                        <div class="card-year">2 0 1 7</div>
+                        <div class="card-annotation">村上春树 · 理念与隐喻的回归</div>
+                    </div>
+                </div>
+                <div class="timeline-dot"></div>
+                <div class="floating-title">〈 刺 杀 骑 士 团 长 〉</div>
+            </div>
+
+            <!-- 2020 -->
+            <div class="timeline-item left" data-bg="https://picsum.photos/seed/book2020/1920/1080">
+                <div class="card">
+                    <img class="card-img" src="https://picsum.photos/seed/book2020/400/260" alt="2020" loading="lazy">
+                    <div class="card-body">
+                        <div class="card-year">2 0 2 0</div>
+                        <div class="card-annotation">村上春树 · 只要音乐还在，就继续跳舞</div>
+                    </div>
+                </div>
+                <div class="timeline-dot"></div>
+                <div class="floating-title">〈 舞 ! 舞 ! 舞 ! 〉</div>
+            </div>
+
+        </div>
+
+        <div class="scroll-spacer-bottom"></div>
+    </div>
+
+    <script>
+        (function () {
+            const bgOverlay = document.getElementById('bgOverlay');
+            const timeline = document.getElementById('timeline');
+            const items = Array.from(timeline.querySelectorAll('.timeline-item'));
+
+            let activeIndex = -1;
+
+            /** 找到当前最接近视口中心的卡片 */
+            function findCentermostItem() {
+                const viewportCenter = window.innerHeight / 2;
+                let bestItem = null;
+                let bestDistance = Infinity;
+
+                items.forEach(item => {
+                    const rect = item.getBoundingClientRect();
+                    const itemCenter = rect.top + rect.height / 2;
+                    const distance = Math.abs(itemCenter - viewportCenter);
+                    if (rect.bottom > -100 && rect.top < window.innerHeight + 100) {
+                        if (distance < bestDistance) {
+                            bestDistance = distance;
+                            bestItem = item;
+                        }
+                    }
+                });
+
+                return bestItem;
+            }
+
+            /** 更新激活状态 */
+            function updateActiveItem() {
+                const centermost = findCentermostItem();
+                if (!centermost) return;
+
+                const newIndex = items.indexOf(centermost);
+                if (newIndex === activeIndex) return;
+
+                // 移除旧状态
+                if (activeIndex >= 0) {
+                    items[activeIndex].classList.remove('active');
+                }
+
+                // 设置新状态
+                activeIndex = newIndex;
+                centermost.classList.add('active');
+                document.body.classList.add('has-active');
+
+                // 更新背景
+                const bgUrl = centermost.dataset.bg;
+                if (bgUrl) {
+                    // 预加载背景图以实现平滑过渡
+                    const img = new Image();
+                    img.onload = () => {
+                        bgOverlay.style.backgroundImage = `url(${bgUrl})`;
+                    };
+                    img.src = bgUrl;
+                    // 如果3秒还没加载完，强制设置
+                    setTimeout(() => {
+                        bgOverlay.style.backgroundImage = `url(${bgUrl})`;
+                    }, 3000);
+                }
+
+                updateBlurStates();
+            }
+
+            /** 更新模糊状态：非激活卡片变模糊 */
+            function updateBlurStates() {
+                items.forEach((item, i) => {
+                    if (i === activeIndex) {
+                        item.classList.remove('blurred');
+                    } else {
+                        item.classList.add('blurred');
+                    }
+                });
+            }
+
+            // RAF 节流的滚动监听
+            let ticking = false;
+            window.addEventListener('scroll', () => {
+                if (!ticking) {
+                    requestAnimationFrame(() => {
+                        updateActiveItem();
+                        ticking = false;
+                    });
+                    ticking = true;
+                }
+            }, { passive: true });
+
+            // 初始化
+            function init() {
+                if (items.length > 0) {
+                    bgOverlay.style.backgroundImage = `url(${items[0].dataset.bg})`;
+                }
+                updateActiveItem();
+            }
+
+            window.addEventListener('resize', updateActiveItem, { passive: true });
+            init();
+        })();
+    </script>
+</body>
+</html>

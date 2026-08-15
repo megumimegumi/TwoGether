@@ -1,0 +1,27 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="360dp"
+    android:height="260dp"
+    android:viewportWidth="360"
+    android:viewportHeight="260">
+    <!-- 春樱公园 -->
+    <path android:pathData="M0,0h360v260h-360z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0" android:startY="0"
+                android:endX="0" android:endY="260"
+                android:startColor="#FFC9EDC9"
+                android:centerColor="#FF9AD9B8"
+                android:endColor="#FF6FBFA0" />
+        </aapt:attr>
+    </path>
+    <path android:fillColor="#99FFB7C5" android:pathData="M50,36m-22,0a22,22 0,1 1,44 0a22,22 0,1 1,-44 0" />
+    <path android:fillColor="#AAFF9A8B" android:pathData="M82,54m-16,0a16,16 0,1 1,32 0a16,16 0,1 1,-32 0" />
+    <path android:fillColor="#99FFB7C5" android:pathData="M110,30m-18,0a18,18 0,1 1,36 0a18,18 0,1 1,-36 0" />
+    <path android:fillColor="#AAFF9A8B" android:pathData="M300,40m-24,0a24,24 0,1 1,48 0a24,24 0,1 1,-48 0" />
+    <path android:fillColor="#99FFB7C5" android:pathData="M270,62m-16,0a16,16 0,1 1,32 0a16,16 0,1 1,-32 0" />
+    <path android:fillColor="#CCFFFFFF" android:pathData="M0,200 Q90,188 180,200 T360,200 L360,260 L0,260 Z" />
+    <path android:fillColor="#99E8A87C" android:pathData="M60,260 L78,196 L96,260 Z" />
+    <path android:fillColor="#99E8A87C" android:pathData="M286,260 L300,204 L314,260 Z" />
+</vector>
