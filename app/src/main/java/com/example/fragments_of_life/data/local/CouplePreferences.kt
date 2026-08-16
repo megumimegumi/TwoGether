@@ -100,8 +100,8 @@ class CouplePreferences(context: Context) {
     }
 
     // ===== 演示数据开关 =====
-    /** 用户执行「初始化数据」后为 true:不再自动填充演示数据 */
-    fun isDemoSeedDisabled(): Boolean = prefs.getBoolean("demo_seed_disabled", false)
+    /** 是否禁止自动填充演示数据(默认禁止:首次打开即为干净空白状态) */
+    fun isDemoSeedDisabled(): Boolean = prefs.getBoolean("demo_seed_disabled", true)
 
     fun setDemoSeedDisabled(disabled: Boolean) {
         prefs.edit().putBoolean("demo_seed_disabled", disabled).apply()

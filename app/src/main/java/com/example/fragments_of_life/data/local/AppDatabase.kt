@@ -1,7 +1,6 @@
 package com.example.fragments_of_life.data.local
 
 import android.content.Context
-import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -13,9 +12,6 @@ import com.example.fragments_of_life.data.model.Moment
 import com.example.fragments_of_life.data.model.PartnerNote
 import com.example.fragments_of_life.data.model.WhisperLetter
 import com.example.fragments_of_life.data.model.WishItem
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 /** 4→5:新增悄悄话信箱表(真正的迁移,不清空用户数据) */
 val MIGRATION_4_5 = object : Migration(4, 5) {
@@ -64,9 +60,6 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        @Volatile
-        private var asyncSeedFired = false
-
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -77,25 +70,7 @@ abstract class AppDatabase : RoomDatabase() {
                     .addMigrations(MIGRATION_4_5, MIGRATION_5_6)
                     .fallbackToDestructiveMigration()
                     .build()
-                    .also { db ->
-                        INSTANCE = db
-                        // 兜底异步补种(主路径在 MainActivity 同步播种)。
-                        // 用户执行过「初始化数据」后不再自动填充演示数据。
-                        if (!asyncSeedFired) {
-                            asyncSeedFired = true
-                            CoroutineScope(Dispatchers.IO).launch {
-                                try {
-                                    if (!CouplePreferences.getInstance(context).isDemoSeedDisabled()) {
-                                        db.seedIfEmpty()
-                                        db.seedLettersIfEmpty()
-                                        db.seedPartnerNotesIfEmpty()
-                                    }
-                                } catch (e: Exception) {
-                                    Log.e("SeedData", "异步补种失败", e)
-                                }
-                            }
-                        }
-                    }
+                    .also { INSTANCE = it }
             }
         }
     }

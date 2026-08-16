@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -16,16 +15,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.core.content.ContextCompat
-import com.example.fragments_of_life.data.local.AppDatabase
 import com.example.fragments_of_life.data.local.CouplePreferences
-import com.example.fragments_of_life.data.local.seedIfEmpty
-import com.example.fragments_of_life.data.local.seedLettersIfEmpty
-import com.example.fragments_of_life.data.local.seedPartnerNotesIfEmpty
 import com.example.fragments_of_life.data.reminder.ReminderScheduler
 import com.example.fragments_of_life.ui.components.SplashScreen
 import com.example.fragments_of_life.ui.navigation.AppNavigation
@@ -33,9 +27,6 @@ import com.example.fragments_of_life.ui.screens.lock.LockScreen
 import com.example.fragments_of_life.ui.theme.FragmentsOfLifeTheme
 import com.example.fragments_of_life.ui.theme.LocalAppColors
 import com.example.fragments_of_life.ui.theme.LocalThemeController
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,22 +35,7 @@ class MainActivity : ComponentActivity() {
 
         val prefs = CouplePreferences.getInstance(this)
 
-        // 同步补种演示数据:首次安装时方便预览效果。
-        // 用户执行过「初始化数据」后不再自动填充(尊重用户清空数据的意愿)。
-        if (!prefs.isDemoSeedDisabled()) {
-            try {
-                runBlocking(Dispatchers.IO) {
-                    withTimeout(10_000) {
-                        val db = AppDatabase.getInstance(this@MainActivity)
-                        db.seedIfEmpty()
-                        db.seedLettersIfEmpty()
-                        db.seedPartnerNotesIfEmpty()
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("SeedData", "启动播种失败", e)
-            }
-        }
+        // 首次打开即为干净的空白状态,不再自动填充演示数据
 
         // 每天检查一次纪念日/年度回顾提醒(Worker 内部会尊重提醒开关)
         ReminderScheduler.schedule(this)
