@@ -109,11 +109,20 @@ fun AddMomentScreen(
         locateTimeout = null
     }
 
+    /** 反解为「省+市」级别的位置描述 */
     fun geocode(loc: Location): String? = try {
         @Suppress("DEPRECATION")
         val addresses = Geocoder(context, Locale.getDefault())
             .getFromLocation(loc.latitude, loc.longitude, 1)
-        addresses?.firstOrNull()?.let { it.getAddressLine(0) ?: it.featureName }
+        val addr = addresses?.firstOrNull()
+        val province = addr?.adminArea
+        val city = addr?.locality ?: addr?.subAdminArea
+        when {
+            city != null && province != null && province != city -> "$province$city"
+            city != null -> city
+            province != null -> province
+            else -> null
+        }
     } catch (_: Exception) {
         null
     }

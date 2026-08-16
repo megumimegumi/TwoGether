@@ -59,6 +59,7 @@ fun UsScreen(
     onOpenReview: () -> Unit = {},
     onOpenMailbox: () -> Unit = {},
     onOpenUniverse: () -> Unit = {},
+    onCoupleInfoChanged: (CoupleInfo) -> Unit = {},
 ) {
     val colors = LocalAppColors.current
     val context = LocalContext.current
@@ -70,7 +71,7 @@ fun UsScreen(
 
     var showEditCouple by remember { mutableStateOf(false) }
     var showLockSetup by remember { mutableStateOf(false) }
-    var showResetConfirm by remember { mutableStateOf(false) }
+    var resetStep by remember { mutableIntStateOf(0) }   // 0 隐藏;1-3 三步确认
     var showThemePicker by remember { mutableStateOf(false) }
 
     var remindersEnabled by remember { mutableStateOf(prefs.remindersEnabled) }
@@ -87,8 +88,8 @@ fun UsScreen(
         }
     }
 
-    BackHandler(enabled = showEditCouple || showLockSetup || showResetConfirm) {
-        showEditCouple = false; showLockSetup = false; showResetConfirm = false
+    BackHandler(enabled = showEditCouple || showLockSetup || showThemePicker || resetStep > 0) {
+        showEditCouple = false; showLockSetup = false; showThemePicker = false; resetStep = 0
     }
 
     Column(
@@ -264,7 +265,7 @@ fun UsScreen(
 
                     Spacer(Modifier.height(8.dp))
                     TextButton(
-                        onClick = { showResetConfirm = true },
+                        onClick = { resetStep = 1 },
                         modifier = Modifier.align(Alignment.End)
                     ) {
                         Icon(Icons.Default.DeleteForever, null, Modifier.size(15.dp), tint = colors.softRed)
@@ -306,6 +307,7 @@ fun UsScreen(
             onSave = { info ->
                 prefs.saveCoupleInfo(info)
                 coupleInfo = info
+                onCoupleInfoChanged(info)
                 showEditCouple = false
             },
             onDismiss = { showEditCouple = false }
@@ -323,24 +325,61 @@ fun UsScreen(
         )
     }
 
-    if (showResetConfirm) {
+    // ── 初始化数据:三步确认,防止误触 ──
+    if (resetStep > 0) {
+        val setTheme = LocalThemeController.current
         AlertDialog(
-            onDismissRequest = { showResetConfirm = false },
+            onDismissRequest = { resetStep = 0 },
             containerColor = colors.card,
             shape = RoundedCornerShape(24.dp),
-            title = { Text("⚠️ 重置应用", color = colors.textPrimary, fontWeight = FontWeight.SemiBold) },
-            text = { Text("这将清除所有数据(碎片、纪念日、愿望清单、信件、备忘),并恢复演示数据。确定要继续吗?", color = colors.textSecondary) },
+            title = {
+                Text(
+                    when (resetStep) {
+                        1 -> "⚠️ 确认清除数据?(1/3)"
+                        2 -> "⚠️ 真的要删除吗?(2/3)"
+                        else -> "🚨 最后一次确认(3/3)"
+                    },
+                    color = colors.textPrimary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            },
+            text = {
+                Text(
+                    when (resetStep) {
+                        1 -> "这将清除你们的所有记录:碎片、纪念日、愿望清单、信件、关于TA的备忘,以及情侣档案等设置。清除后不会再自动填充演示数据。"
+                        2 -> "所有数据将被永久删除、无法恢复。请再次确认你不是误触。"
+                        else -> "最后一次提醒:此操作不可撤销!确认要删除全部数据吗?"
+                    },
+                    color = colors.textSecondary
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
-                    // 清空后立即重新补种,年度回顾 / 悄悄话信箱等功能马上可用
-                    viewModel.resetAndReseed()
-                    prefs.clearAll()
-                    coupleInfo = prefs.loadCoupleInfo()
-                    showResetConfirm = false
-                }) { Text("确定重置", color = colors.softRed, fontWeight = FontWeight.SemiBold) }
+                    if (resetStep < 3) {
+                        resetStep++
+                    } else {
+                        // 彻底清空用户数据,不重新填充演示数据
+                        viewModel.clearAllData()
+                        prefs.clearAll()
+                        prefs.setDemoSeedDisabled(true)
+                        coupleInfo = prefs.loadCoupleInfo()
+                        onCoupleInfoChanged(coupleInfo)
+                        lockEnabled = false
+                        remindersEnabled = prefs.remindersEnabled
+                        // 主题偏好已被清空,同步恢复默认主题
+                        setTheme?.invoke("peach")
+                        resetStep = 0
+                    }
+                }) {
+                    Text(
+                        if (resetStep < 3) "继续 →" else "确定删除",
+                        color = colors.softRed,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             },
             dismissButton = {
-                TextButton(onClick = { showResetConfirm = false }) { Text("取消", color = colors.textSecondary) }
+                TextButton(onClick = { resetStep = 0 }) { Text("取消", color = colors.textSecondary) }
             }
         )
     }

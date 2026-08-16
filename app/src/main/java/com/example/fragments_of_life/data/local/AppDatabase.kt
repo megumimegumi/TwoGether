@@ -79,14 +79,17 @@ abstract class AppDatabase : RoomDatabase() {
                     .build()
                     .also { db ->
                         INSTANCE = db
-                        // 兜底异步补种(主路径在 MainActivity 同步播种)
+                        // 兜底异步补种(主路径在 MainActivity 同步播种)。
+                        // 用户执行过「初始化数据」后不再自动填充演示数据。
                         if (!asyncSeedFired) {
                             asyncSeedFired = true
                             CoroutineScope(Dispatchers.IO).launch {
                                 try {
-                                    db.seedIfEmpty()
-                                    db.seedLettersIfEmpty()
-                                    db.seedPartnerNotesIfEmpty()
+                                    if (!CouplePreferences.getInstance(context).isDemoSeedDisabled()) {
+                                        db.seedIfEmpty()
+                                        db.seedLettersIfEmpty()
+                                        db.seedPartnerNotesIfEmpty()
+                                    }
                                 } catch (e: Exception) {
                                     Log.e("SeedData", "异步补种失败", e)
                                 }

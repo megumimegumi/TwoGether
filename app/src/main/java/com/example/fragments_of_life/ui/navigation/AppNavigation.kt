@@ -73,7 +73,8 @@ fun AppNavigation() {
     val context = LocalContext.current
     val viewModel: LifeViewModel = viewModel()
     val prefs = remember { CouplePreferences.getInstance(context) }
-    val coupleInfo = remember { prefs.loadCoupleInfo() }
+    // 情侣信息做成可变状态:在「我们」页编辑或初始化数据后,今天/纪念日/回顾等页面同步更新
+    var coupleInfo by remember { mutableStateOf(prefs.loadCoupleInfo()) }
 
     var currentTab by remember { mutableStateOf("today") }
 
@@ -159,6 +160,7 @@ fun AppNavigation() {
                 onOpenReview = { showReview = true },
                 onOpenMailbox = { showMailbox = true },
                 onOpenUniverse = { showUniverse = true },
+                onCoupleInfoChanged = { coupleInfo = it },
             )
         }
 

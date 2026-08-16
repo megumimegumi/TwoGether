@@ -42,25 +42,29 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // 同步补种演示数据:保证界面渲染前数据就位(最多等待 10 秒,失败不阻塞启动)
-        try {
-            runBlocking(Dispatchers.IO) {
-                withTimeout(10_000) {
-                    val db = AppDatabase.getInstance(this@MainActivity)
-                    db.seedIfEmpty()
-                    db.seedLettersIfEmpty()
-                    db.seedPartnerNotesIfEmpty()
+        val prefs = CouplePreferences.getInstance(this)
+
+        // 同步补种演示数据:首次安装时方便预览效果。
+        // 用户执行过「初始化数据」后不再自动填充(尊重用户清空数据的意愿)。
+        if (!prefs.isDemoSeedDisabled()) {
+            try {
+                runBlocking(Dispatchers.IO) {
+                    withTimeout(10_000) {
+                        val db = AppDatabase.getInstance(this@MainActivity)
+                        db.seedIfEmpty()
+                        db.seedLettersIfEmpty()
+                        db.seedPartnerNotesIfEmpty()
+                    }
                 }
+            } catch (e: Exception) {
+                Log.e("SeedData", "启动播种失败", e)
             }
-        } catch (e: Exception) {
-            Log.e("SeedData", "启动播种失败", e)
         }
 
         // 每天检查一次纪念日/年度回顾提醒(Worker 内部会尊重提醒开关)
         ReminderScheduler.schedule(this)
 
         setContent {
-            val prefs = remember { CouplePreferences.getInstance(this@MainActivity) }
             var themeKey by rememberSaveable { mutableStateOf(prefs.themeKey) }
 
             CompositionLocalProvider(

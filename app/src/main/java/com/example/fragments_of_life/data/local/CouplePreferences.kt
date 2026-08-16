@@ -97,6 +97,14 @@ class CouplePreferences(context: Context) {
         prefs.edit().putString("theme_key", key).apply()
     }
 
+    // ===== 演示数据开关 =====
+    /** 用户执行「初始化数据」后为 true:不再自动填充演示数据 */
+    fun isDemoSeedDisabled(): Boolean = prefs.getBoolean("demo_seed_disabled", false)
+
+    fun setDemoSeedDisabled(disabled: Boolean) {
+        prefs.edit().putBoolean("demo_seed_disabled", disabled).apply()
+    }
+
     fun clearAll() {
         prefs.edit().clear().apply()
     }
