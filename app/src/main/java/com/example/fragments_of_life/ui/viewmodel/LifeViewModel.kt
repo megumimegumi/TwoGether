@@ -4,6 +4,9 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.fragments_of_life.data.local.AppDatabase
+import com.example.fragments_of_life.data.local.seedIfEmpty
+import com.example.fragments_of_life.data.local.seedLettersIfEmpty
+import com.example.fragments_of_life.data.local.seedPartnerNotesIfEmpty
 import com.example.fragments_of_life.data.model.ImportantDate
 import com.example.fragments_of_life.data.model.Moment
 import com.example.fragments_of_life.data.model.PartnerNote
@@ -16,7 +19,8 @@ import java.time.LocalDate
 
 class LifeViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val dao = AppDatabase.getInstance(application).momentDao()
+    private val db = AppDatabase.getInstance(application)
+    private val dao = db.momentDao()
 
     // ===== 生活碎片 =====
     val allMoments: StateFlow<List<Moment>> = dao.getAllMoments()
@@ -147,6 +151,20 @@ class LifeViewModel(application: Application) : AndroidViewModel(application) {
             dao.clearAllWishes()
             dao.clearAllLetters()
             dao.clearAllPartnerNotes()
+        }
+    }
+
+    /** 初始化数据:清空后立即重新补种演示数据,保证各功能(年度回顾/信箱等)立刻可用 */
+    fun resetAndReseed() {
+        viewModelScope.launch {
+            dao.clearAllMoments()
+            dao.clearAllImportantDates()
+            dao.clearAllWishes()
+            dao.clearAllLetters()
+            dao.clearAllPartnerNotes()
+            db.seedIfEmpty()
+            db.seedLettersIfEmpty()
+            db.seedPartnerNotesIfEmpty()
         }
     }
 }

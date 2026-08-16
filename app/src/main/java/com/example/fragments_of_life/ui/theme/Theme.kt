@@ -13,65 +13,20 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 /** 全局取色的 CompositionLocal */
-val LocalAppColors = staticCompositionLocalOf { LightAppColors }
+val LocalAppColors = staticCompositionLocalOf { lightAppColors(themeOption(null).core) }
 
-private val LightColorScheme = lightColorScheme(
-    primary = PeachPink,
-    onPrimary = Color.White,
-    primaryContainer = PeachLight,
-    onPrimaryContainer = RoseDeep,
-    secondary = TaroPurple,
-    onSecondary = Color.White,
-    secondaryContainer = TaroLight,
-    onSecondaryContainer = Color(0xFF4A3F68),
-    tertiary = ChampagneGold,
-    onTertiary = TextPrimary,
-    tertiaryContainer = GoldLight,
-    onTertiaryContainer = TextSecondary,
-    error = SoftRed,
-    onError = Color.White,
-    background = CreamWhite,
-    onBackground = TextPrimary,
-    surface = SurfaceWhite,
-    onSurface = TextPrimary,
-    surfaceVariant = CardCream,
-    onSurfaceVariant = TextSecondary,
-    outline = PeachLight,
-    outlineVariant = TaroLight.copy(alpha = 0.6f)
-)
-
-private val DarkColorScheme = darkColorScheme(
-    primary = PeachPink,
-    onPrimary = Color(0xFF3B1F2B),
-    primaryContainer = Color(0xFF4A3550),
-    onPrimaryContainer = PeachLight,
-    secondary = TaroPurple,
-    onSecondary = Color(0xFF2A2140),
-    secondaryContainer = Color(0xFF3E3560),
-    onSecondaryContainer = TaroLight,
-    tertiary = DarkGold,
-    onTertiary = Color(0xFF3B2F1F),
-    tertiaryContainer = Color(0xFF54483A),
-    onTertiaryContainer = DarkGold,
-    error = SoftRed,
-    onError = Color(0xFF3B1F2B),
-    background = DarkBackground,
-    onBackground = DarkTextPrimary,
-    surface = DarkSurface,
-    onSurface = DarkTextPrimary,
-    surfaceVariant = DarkCard,
-    onSurfaceVariant = DarkTextSecondary,
-    outline = Color(0xFF4A3F68),
-    outlineVariant = Color(0xFF3E3560)
-)
+/** 主题切换控制器:由 MainActivity 注入,设置页用它换主题 */
+val LocalThemeController = staticCompositionLocalOf<((String) -> Unit)?> { null }
 
 @Composable
 fun FragmentsOfLifeTheme(
+    themeKey: String = "peach",
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-    val appColors = if (darkTheme) DarkAppColors else LightAppColors
+    val core = themeOption(themeKey).core
+    val appColors = if (darkTheme) darkAppColors(core) else lightAppColors(core)
+    val colorScheme = if (darkTheme) darkColorSchemeFor(core) else lightColorSchemeFor(core)
 
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -90,3 +45,53 @@ fun FragmentsOfLifeTheme(
         )
     }
 }
+
+private fun lightColorSchemeFor(core: ThemeCore) = lightColorScheme(
+    primary = core.primary,
+    onPrimary = core.onPrimary,
+    primaryContainer = core.primaryLight,
+    onPrimaryContainer = core.rose,
+    secondary = core.secondary,
+    onSecondary = core.onPrimary,
+    secondaryContainer = core.secondaryLight,
+    onSecondaryContainer = core.rose,
+    tertiary = core.gold,
+    onTertiary = TextPrimary,
+    tertiaryContainer = core.goldLight,
+    onTertiaryContainer = TextSecondary,
+    error = SoftRed,
+    onError = Color.White,
+    background = CreamWhite,
+    onBackground = TextPrimary,
+    surface = SurfaceWhite,
+    onSurface = TextPrimary,
+    surfaceVariant = CardCream,
+    onSurfaceVariant = TextSecondary,
+    outline = core.primaryLight,
+    outlineVariant = core.secondaryLight.copy(alpha = 0.6f)
+)
+
+private fun darkColorSchemeFor(core: ThemeCore) = darkColorScheme(
+    primary = core.primary,
+    onPrimary = core.onPrimary,
+    primaryContainer = darken(core.primaryLight),
+    onPrimaryContainer = core.primaryLight,
+    secondary = core.secondary,
+    onSecondary = core.onPrimary,
+    secondaryContainer = darken(core.secondaryLight),
+    onSecondaryContainer = core.secondaryLight,
+    tertiary = core.gold,
+    onTertiary = Color(0xFF3B2F1F),
+    tertiaryContainer = darken(core.goldLight),
+    onTertiaryContainer = core.gold,
+    error = SoftRed,
+    onError = Color(0xFF3B1F2B),
+    background = DarkBackground,
+    onBackground = DarkTextPrimary,
+    surface = DarkSurface,
+    onSurface = DarkTextPrimary,
+    surfaceVariant = DarkCard,
+    onSurfaceVariant = DarkTextSecondary,
+    outline = Color(0xFF4A3F68),
+    outlineVariant = Color(0xFF3E3560)
+)

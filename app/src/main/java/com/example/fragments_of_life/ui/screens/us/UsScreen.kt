@@ -41,7 +41,10 @@ import com.example.fragments_of_life.ui.components.*
 import com.example.fragments_of_life.ui.theme.CardShape
 import com.example.fragments_of_life.ui.theme.FieldShape
 import com.example.fragments_of_life.ui.theme.LocalAppColors
+import com.example.fragments_of_life.ui.theme.LocalThemeController
+import com.example.fragments_of_life.ui.theme.appThemeOptions
 import com.example.fragments_of_life.ui.theme.beautifulFieldColors
+import com.example.fragments_of_life.ui.theme.themeOption
 import com.example.fragments_of_life.ui.viewmodel.LifeViewModel
 import java.time.Instant
 import java.time.LocalDate
@@ -68,6 +71,7 @@ fun UsScreen(
     var showEditCouple by remember { mutableStateOf(false) }
     var showLockSetup by remember { mutableStateOf(false) }
     var showResetConfirm by remember { mutableStateOf(false) }
+    var showThemePicker by remember { mutableStateOf(false) }
 
     var remindersEnabled by remember { mutableStateOf(prefs.remindersEnabled) }
     var lockEnabled by remember { mutableStateOf(prefs.lockEnabled) }
@@ -233,8 +237,30 @@ fun UsScreen(
                         )
                     }
 
-                    SettingRow("🎨", "主题配色", "奶油手账 · 跟随系统")
-                    SettingRow("ℹ️", "版本", "拾光 v2.0")
+                    // 主题配色
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(colors.peach.copy(alpha = 0.05f))
+                            .clickable { showThemePicker = true }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🎨", fontSize = 18.sp)
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("主题配色", style = MaterialTheme.typography.bodyMedium, color = colors.textPrimary)
+                            Text(
+                                "${themeOption(prefs.themeKey).emoji} ${themeOption(prefs.themeKey).name} · 跟随系统深浅色",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = colors.textTertiary
+                            )
+                        }
+                        Icon(Icons.Default.ChevronRight, null, Modifier.size(16.dp), tint = colors.textTertiary)
+                    }
+
+                    SettingRow("ℹ️", "版本", "拾光 v2.1")
 
                     Spacer(Modifier.height(8.dp))
                     TextButton(
@@ -303,16 +329,73 @@ fun UsScreen(
             containerColor = colors.card,
             shape = RoundedCornerShape(24.dp),
             title = { Text("⚠️ 重置应用", color = colors.textPrimary, fontWeight = FontWeight.SemiBold) },
-            text = { Text("这将清除所有数据(碎片、纪念日、愿望清单),且无法恢复。确定要继续吗?", color = colors.textSecondary) },
+            text = { Text("这将清除所有数据(碎片、纪念日、愿望清单、信件、备忘),并恢复演示数据。确定要继续吗?", color = colors.textSecondary) },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.clearAll()
+                    // 清空后立即重新补种,年度回顾 / 悄悄话信箱等功能马上可用
+                    viewModel.resetAndReseed()
                     prefs.clearAll()
+                    coupleInfo = prefs.loadCoupleInfo()
                     showResetConfirm = false
                 }) { Text("确定重置", color = colors.softRed, fontWeight = FontWeight.SemiBold) }
             },
             dismissButton = {
                 TextButton(onClick = { showResetConfirm = false }) { Text("取消", color = colors.textSecondary) }
+            }
+        )
+    }
+
+    // ── 主题选择 ──
+    if (showThemePicker) {
+        val setTheme = LocalThemeController.current
+        AlertDialog(
+            onDismissRequest = { showThemePicker = false },
+            containerColor = colors.card,
+            shape = RoundedCornerShape(24.dp),
+            title = { Text("🎨 选择主题", color = colors.textPrimary, fontWeight = FontWeight.SemiBold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    appThemeOptions.forEach { opt ->
+                        val selected = prefs.themeKey == opt.key
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(if (selected) colors.peach.copy(alpha = 0.12f) else Color.Transparent)
+                                .clickable {
+                                    setTheme?.invoke(opt.key)
+                                    showThemePicker = false
+                                }
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // 主题色板
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                listOf(opt.core.primary, opt.core.secondary, opt.core.gold).forEach { c ->
+                                    Box(
+                                        Modifier
+                                            .size(20.dp)
+                                            .background(c, CircleShape)
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                "${opt.emoji} ${opt.name}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = colors.textPrimary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (selected) {
+                                Text("✓ 使用中", style = MaterialTheme.typography.labelSmall, color = colors.rose)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showThemePicker = false }) { Text("关闭", color = colors.textSecondary) }
             }
         )
     }

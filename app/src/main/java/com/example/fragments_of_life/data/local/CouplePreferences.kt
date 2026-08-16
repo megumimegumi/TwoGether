@@ -90,6 +90,13 @@ class CouplePreferences(context: Context) {
         prefs.edit().putStringSet("custom_note_categories", categories.toSet()).apply()
     }
 
+    // ===== 主题配色 =====
+    val themeKey: String get() = prefs.getString("theme_key", "peach") ?: "peach"
+
+    fun saveThemeKey(key: String) {
+        prefs.edit().putString("theme_key", key).apply()
+    }
+
     fun clearAll() {
         prefs.edit().clear().apply()
     }

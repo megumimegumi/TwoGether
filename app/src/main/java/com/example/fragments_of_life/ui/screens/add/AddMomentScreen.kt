@@ -1,5 +1,15 @@
 package com.example.fragments_of_life.ui.screens.add
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.Geocoder
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
+import android.os.Bundle
+import android.os.Looper
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -24,10 +34,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import com.example.fragments_of_life.data.model.Moment
 import com.example.fragments_of_life.data.model.MomentType
@@ -35,12 +47,15 @@ import com.example.fragments_of_life.data.model.Mood
 import com.example.fragments_of_life.ui.theme.FieldShape
 import com.example.fragments_of_life.ui.theme.LocalAppColors
 import com.example.fragments_of_life.ui.theme.beautifulFieldColors
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
+import java.util.Locale
 
 /** 预置标签 */
 private val presetTags = listOf("第一次", "旅行", "日常", "吵架和好", "小惊喜", "纪念日")
@@ -74,6 +89,94 @@ fun AddMomentScreen(
     var tags by remember { mutableStateOf(editMoment?.tags ?: emptyList()) }
     var customTag by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
+
+    // ── 定位状态 ──
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var isLocating by remember { mutableStateOf(false) }
+    var locationStatus by remember { mutableStateOf("") }
+    var locateTimeout by remember { mutableStateOf<Job?>(null) }
+    val locationManager = remember {
+        context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    }
+
+    // 权限请求入口(在权限启动器创建后赋值,避免局部函数声明顺序问题)
+    var requestLocationPermission: (() -> Unit)? = null
+
+    fun finishLocating() {
+        isLocating = false
+        locateTimeout?.cancel()
+        locateTimeout = null
+    }
+
+    fun geocode(loc: Location): String? = try {
+        @Suppress("DEPRECATION")
+        val addresses = Geocoder(context, Locale.getDefault())
+            .getFromLocation(loc.latitude, loc.longitude, 1)
+        addresses?.firstOrNull()?.let { it.getAddressLine(0) ?: it.featureName }
+    } catch (_: Exception) {
+        null
+    }
+
+    fun startLocating() {
+        if (isLocating) return
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestLocationPermission?.invoke()
+            return
+        }
+        isLocating = true
+        locationStatus = "正在定位…"
+
+        val listener = object : LocationListener {
+            override fun onLocationChanged(loc: Location) {
+                finishLocating()
+                val text = geocode(loc) ?: "%.4f, %.4f".format(loc.latitude, loc.longitude)
+                location = text
+                locationStatus = "已定位 ✓"
+                try { locationManager.removeUpdates(this) } catch (_: Exception) {}
+            }
+
+            override fun onProviderEnabled(provider: String) {}
+            override fun onProviderDisabled(provider: String) {}
+            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+        }
+
+        // 优先取最近一次已知位置,没有再请求单次定位
+        @SuppressLint("MissingPermission")
+        val last = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            ?: locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+            ?: locationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
+
+        if (last != null) {
+            listener.onLocationChanged(last)
+        } else {
+            try {
+                locationManager.requestSingleUpdate(LocationManager.NETWORK_PROVIDER, listener, Looper.getMainLooper())
+                locationManager.requestSingleUpdate(LocationManager.GPS_PROVIDER, listener, Looper.getMainLooper())
+                // 9 秒超时兜底
+                locateTimeout = scope.launch {
+                    delay(9000)
+                    if (isLocating) {
+                        finishLocating()
+                        locationStatus = "定位超时,请检查系统定位开关,或手动填写"
+                        try { locationManager.removeUpdates(listener) } catch (_: Exception) {}
+                    }
+                }
+            } catch (e: Exception) {
+                finishLocating()
+                locationStatus = "定位失败,试试手动填写"
+            }
+        }
+    }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) startLocating() else locationStatus = "未获得定位权限,可手动填写地点"
+    }
+    requestLocationPermission = { locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) }
 
     // 保存成功动画
     var saved by remember { mutableStateOf(false) }
@@ -285,6 +388,26 @@ fun AddMomentScreen(
                     )
                 }
             }
+
+            // 已添加的标签(含自定义),显示在标签栏,点击可移除
+            if (tags.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    tags.forEach { tag ->
+                        Text(
+                            "#$tag ×",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = colors.rose,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(colors.roseLight.copy(alpha = 0.6f))
+                                .clickable { tags = tags - tag }
+                                .padding(horizontal = 12.dp, vertical = 7.dp)
+                        )
+                    }
+                }
+            }
+
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
@@ -340,14 +463,35 @@ fun AddMomentScreen(
                 value = location,
                 onValueChange = { location = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("在哪里发生的?", color = colors.textTertiary) },
+                placeholder = { Text("在哪里发生的?或点右侧按钮自动定位", color = colors.textTertiary) },
                 colors = beautifulFieldColors(),
                 shape = FieldShape,
                 singleLine = true,
                 leadingIcon = {
                     Icon(Icons.Default.LocationOn, null, tint = colors.peach.copy(alpha = 0.7f))
+                },
+                trailingIcon = {
+                    if (isLocating) {
+                        CircularProgressIndicator(
+                            Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = colors.rose
+                        )
+                    } else {
+                        IconButton(onClick = { startLocating() }) {
+                            Icon(Icons.Default.MyLocation, "定位当前位置", tint = colors.rose)
+                        }
+                    }
                 }
             )
+            if (locationStatus.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    locationStatus,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.taro
+                )
+            }
 
             Spacer(Modifier.height(28.dp))
         }

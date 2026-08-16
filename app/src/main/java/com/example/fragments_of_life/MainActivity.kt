@@ -14,6 +14,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -31,6 +32,7 @@ import com.example.fragments_of_life.ui.navigation.AppNavigation
 import com.example.fragments_of_life.ui.screens.lock.LockScreen
 import com.example.fragments_of_life.ui.theme.FragmentsOfLifeTheme
 import com.example.fragments_of_life.ui.theme.LocalAppColors
+import com.example.fragments_of_life.ui.theme.LocalThemeController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -58,9 +60,17 @@ class MainActivity : ComponentActivity() {
         ReminderScheduler.schedule(this)
 
         setContent {
-            FragmentsOfLifeTheme {
+            val prefs = remember { CouplePreferences.getInstance(this@MainActivity) }
+            var themeKey by rememberSaveable { mutableStateOf(prefs.themeKey) }
+
+            CompositionLocalProvider(
+                LocalThemeController provides { key ->
+                    themeKey = key
+                    prefs.saveThemeKey(key)
+                }
+            ) {
+                FragmentsOfLifeTheme(themeKey = themeKey) {
                 var stage by rememberSaveable { mutableStateOf(0) } // 0=启动动画 1=应用锁 2=主界面
-                val prefs = remember { CouplePreferences.getInstance(this@MainActivity) }
 
                 // ── 首次进入主界面时,礼貌地申请通知权限(只问一次) ──
                 var showNotifDialog by remember { mutableStateOf(false) }
@@ -120,6 +130,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     )
+                }
                 }
             }
         }

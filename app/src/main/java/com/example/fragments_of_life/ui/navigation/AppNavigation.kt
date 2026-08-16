@@ -402,7 +402,7 @@ private fun BottomBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .height(84.dp),
+                .height(80.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             TabButton(
@@ -427,13 +427,9 @@ private fun BottomBar(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(56.dp)
-                        .shadow(
-                            10.dp,
-                            CircleShape,
-                            ambientColor = colors.rose.copy(alpha = 0.55f),
-                            spotColor = colors.rose.copy(alpha = 0.55f)
-                        )
+                        .size(52.dp)
+                        // 中性小阴影,不再使用彩色光晕(光晕会溢出到上方内容,视觉上破坏圆形)
+                        .shadow(6.dp, CircleShape)
                         .background(
                             Brush.linearGradient(
                                 listOf(colors.peach, colors.rose)
@@ -448,7 +444,7 @@ private fun BottomBar(
                         Icons.Default.Add,
                         contentDescription = "记一笔",
                         tint = Color.White,
-                        modifier = Modifier.size(26.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
