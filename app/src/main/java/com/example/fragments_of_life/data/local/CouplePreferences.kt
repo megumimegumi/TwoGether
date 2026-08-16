@@ -26,6 +26,7 @@ class CouplePreferences(context: Context) {
             .putInt("period_cycle", info.partnerPeriodCycleDays)
             .putInt("period_duration", info.partnerPeriodDuration)
             .putString("period_last_start", info.partnerPeriodLastStart?.toString())
+            .putBoolean("has_partner", info.hasPartner)
             .apply()
     }
 
@@ -43,7 +44,8 @@ class CouplePreferences(context: Context) {
             partnerPeriodDuration = prefs.getInt("period_duration", 5),
             partnerPeriodLastStart = prefs.getString("period_last_start", null)?.let {
                 try { LocalDate.parse(it) } catch (_: Exception) { null }
-            }
+            },
+            hasPartner = prefs.getBoolean("has_partner", true)
         )
     }
 

@@ -108,53 +108,70 @@ fun UsScreen(
 
             Spacer(Modifier.height(14.dp))
 
-            // TA的小宇宙入口(顶部显眼卡片)
-            SoftCard(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                onClick = onOpenUniverse,
-            ) {
-                Row(
-                    modifier = Modifier.padding(18.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            // TA的小宇宙入口(单身时隐藏)
+            if (coupleInfo.hasPartner) {
+                SoftCard(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    onClick = onOpenUniverse,
                 ) {
-                    Text("🌌", fontSize = 26.sp)
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            "TA的小宇宙",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = colors.textPrimary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(Modifier.height(3.dp))
-                        Text(
-                            "已记下 ${partnerNotes.size} 件小事 · 爱是记得你的每一句",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = colors.textTertiary
-                        )
+                    Row(
+                        modifier = Modifier.padding(18.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🌌", fontSize = 26.sp)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "TA的小宇宙",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = colors.textPrimary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(Modifier.height(3.dp))
+                            Text(
+                                "已记下 ${partnerNotes.size} 件小事 · 爱是记得你的每一句",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = colors.textTertiary
+                            )
+                        }
+                        Icon(Icons.Default.ChevronRight, null, Modifier.size(18.dp), tint = colors.textTertiary)
                     }
-                    Icon(Icons.Default.ChevronRight, null, Modifier.size(18.dp), tint = colors.textTertiary)
                 }
-            }
 
-            Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(14.dp))
+            }
 
             // 情侣档案
             SoftCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
                 Column(modifier = Modifier.padding(18.dp)) {
-                    SectionTitle(emoji = "💕", title = "情侣档案", trailing = {
-                        TextButton(onClick = { showEditCouple = true }) {
-                            Icon(Icons.Default.Edit, null, Modifier.size(15.dp), tint = colors.rose)
-                            Spacer(Modifier.width(4.dp))
-                            Text("编辑", color = colors.rose, style = MaterialTheme.typography.labelMedium)
+                    SectionTitle(
+                        emoji = if (coupleInfo.hasPartner) "💕" else "💔",
+                        title = if (coupleInfo.hasPartner) "情侣档案" else "我的档案",
+                        trailing = {
+                            TextButton(onClick = { showEditCouple = true }) {
+                                Icon(Icons.Default.Edit, null, Modifier.size(15.dp), tint = colors.rose)
+                                Spacer(Modifier.width(4.dp))
+                                Text("编辑", color = colors.rose, style = MaterialTheme.typography.labelMedium)
+                            }
                         }
-                    })
+                    )
                     Spacer(Modifier.height(10.dp))
-                    InfoRow("👤", "我的名字", "${coupleInfo.myEmoji} ${coupleInfo.myName}")
-                    InfoRow("💝", "TA的名字", "${coupleInfo.partnerEmoji} ${coupleInfo.partnerName}")
-                    InfoRow("💍", "纪念日", coupleInfo.anniversaryDate.format(DateTimeFormatter.ofPattern("yyyy年M月d日")))
-                    InfoRow("📆", "已在一起", "${ChronoUnit.DAYS.between(coupleInfo.anniversaryDate, LocalDate.now()).toInt()} 天")
-                    InfoRow("🩸", "生理周期", "${coupleInfo.partnerPeriodCycleDays} 天 · 持续 ${coupleInfo.partnerPeriodDuration} 天")
+                    if (coupleInfo.hasPartner) {
+                        InfoRow("👤", "我的名字", "${coupleInfo.myEmoji} ${coupleInfo.myName}")
+                        InfoRow("💝", "TA的名字", "${coupleInfo.partnerEmoji} ${coupleInfo.partnerName}")
+                        InfoRow("💍", "纪念日", coupleInfo.anniversaryDate.format(DateTimeFormatter.ofPattern("yyyy年M月d日")))
+                        InfoRow("📆", "已在一起", "${ChronoUnit.DAYS.between(coupleInfo.anniversaryDate, LocalDate.now()).toInt()} 天")
+                        InfoRow("🩸", "生理周期", "${coupleInfo.partnerPeriodCycleDays} 天 · 持续 ${coupleInfo.partnerPeriodDuration} 天")
+                    } else {
+                        InfoRow("👤", "我的名字", "${coupleInfo.myEmoji} ${coupleInfo.myName}")
+                        InfoRow("💔", "状态", "单身中")
+                        Text(
+                            "脱单之后,来这里填写另一半的信息,开启你们的记录吧 💕",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colors.textTertiary,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                 }
             }
 
@@ -282,12 +299,14 @@ fun UsScreen(
                 Column(modifier = Modifier.padding(18.dp)) {
                     SectionTitle(emoji = "✨", title = "更多")
                     Spacer(Modifier.height(10.dp))
-                    MoreActionRow(
-                        emoji = "🎞️",
-                        title = "年度回顾",
-                        desc = "把一年时光做成一部小电影",
-                        onClick = onOpenReview,
-                    )
+                    if (coupleInfo.hasPartner) {
+                        MoreActionRow(
+                            emoji = "🎞️",
+                            title = "年度回顾",
+                            desc = "把一年时光做成一部小电影",
+                            onClick = onOpenReview,
+                        )
+                    }
                     MoreActionRow(
                         emoji = "📮",
                         title = "悄悄话信箱",
@@ -305,9 +324,11 @@ fun UsScreen(
         EditCoupleDialog(
             info = coupleInfo,
             onSave = { info ->
-                prefs.saveCoupleInfo(info)
-                coupleInfo = info
-                onCoupleInfoChanged(info)
+                // 填写档案即视为有另一半
+                val updated = info.copy(hasPartner = true)
+                prefs.saveCoupleInfo(updated)
+                coupleInfo = updated
+                onCoupleInfoChanged(updated)
                 showEditCouple = false
             },
             onDismiss = { showEditCouple = false }
@@ -335,9 +356,9 @@ fun UsScreen(
             title = {
                 Text(
                     when (resetStep) {
-                        1 -> "⚠️ 确认清除数据?(1/3)"
-                        2 -> "⚠️ 真的要删除吗?(2/3)"
-                        else -> "🚨 最后一次确认(3/3)"
+                        1 -> "⚠️ 确认清除数据?"
+                        2 -> "⚠️ 真的要删除吗?"
+                        else -> "🚨 最后一次确认"
                     },
                     color = colors.textPrimary,
                     fontWeight = FontWeight.SemiBold
@@ -362,6 +383,8 @@ fun UsScreen(
                         viewModel.clearAllData()
                         prefs.clearAll()
                         prefs.setDemoSeedDisabled(true)
+                        // 删除 TA 的相关信息,直接回到单身状态
+                        prefs.saveCoupleInfo(CoupleInfo(hasPartner = false))
                         coupleInfo = prefs.loadCoupleInfo()
                         onCoupleInfoChanged(coupleInfo)
                         lockEnabled = false
@@ -440,7 +463,7 @@ fun UsScreen(
     }
 }
 
-/** 情侣头部卡片 */
+/** 情侣头部卡片(单身时显示单身状态) */
 @Composable
 private fun CoupleHeaderCard(info: CoupleInfo) {
     val colors = LocalAppColors.current
@@ -454,37 +477,57 @@ private fun CoupleHeaderCard(info: CoupleInfo) {
             .clip(RoundedCornerShape(28.dp))
             .background(
                 Brush.linearGradient(
-                    listOf(colors.gradientTaro, colors.gradientPeach)
+                    if (info.hasPartner) listOf(colors.gradientTaro, colors.gradientPeach)
+                    else listOf(colors.gradientPeach.copy(alpha = 0.6f), colors.gradientTaro.copy(alpha = 0.5f))
                 )
             )
             .padding(vertical = 24.dp),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                EmojiAvatar(emoji = info.myEmoji, size = 54.dp)
+        if (info.hasPartner) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    EmojiAvatar(emoji = info.myEmoji, size = 54.dp)
+                    Text(
+                        "❤️",
+                        fontSize = 22.sp,
+                        modifier = Modifier
+                            .padding(horizontal = 14.dp)
+                            .graphicsLayer { scaleX = beat; scaleY = beat }
+                    )
+                    EmojiAvatar(emoji = info.partnerEmoji, size = 54.dp)
+                }
+                Spacer(Modifier.height(12.dp))
                 Text(
-                    "❤️",
-                    fontSize = 22.sp,
-                    modifier = Modifier
-                        .padding(horizontal = 14.dp)
-                        .graphicsLayer { scaleX = beat; scaleY = beat }
+                    "${info.myName} ❤️ ${info.partnerName}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold
                 )
-                EmojiAvatar(emoji = info.partnerEmoji, size = 54.dp)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "从 ${info.anniversaryDate.format(DateTimeFormatter.ofPattern("yyyy年M月d日"))} 开始 · 已 ${days} 天",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
             }
-            Spacer(Modifier.height(12.dp))
-            Text(
-                "${info.myName} ❤️ ${info.partnerName}",
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "从 ${info.anniversaryDate.format(DateTimeFormatter.ofPattern("yyyy年M月d日"))} 开始 · 已 ${days} 天",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.8f)
-            )
+        } else {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                EmojiAvatar(emoji = info.myEmoji, size = 54.dp)
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "目前单身 💔",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "等 TA 出现的那天,来这里开始记录你们的故事吧",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
+            }
         }
     }
 }

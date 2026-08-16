@@ -57,10 +57,10 @@ fun AnniversaryScreen(
         ChronoUnit.DAYS.between(coupleInfo.anniversaryDate, today).toInt().coerceAtLeast(0)
     }
 
-    // ── 当天庆祝 ──
+    // ── 当天庆祝(单身时不触发"在一起"庆祝) ──
     val hasTodayEvent = remember(events) { events.any { it.isToday } }
     val coupleAnniversaryToday = remember(coupleInfo, today) {
-        isCoupleAnniversaryToday(coupleInfo.anniversaryDate, today)
+        coupleInfo.hasPartner && isCoupleAnniversaryToday(coupleInfo.anniversaryDate, today)
     }
     var celebrateShown by remember { mutableStateOf(false) }
     LaunchedEffect(hasTodayEvent, coupleAnniversaryToday) {
@@ -84,8 +84,12 @@ fun AnniversaryScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 96.dp)
         ) {
-            // 在一起总天数大卡片
-            TogetherDaysCard(coupleInfo, daysTogether, coupleAnniversaryToday)
+            // 在一起总天数大卡片(单身时显示单身状态)
+            if (coupleInfo.hasPartner) {
+                TogetherDaysCard(coupleInfo, daysTogether, coupleAnniversaryToday)
+            } else {
+                SingleAnniversaryCard()
+            }
 
             Spacer(Modifier.height(16.dp))
 
@@ -145,6 +149,42 @@ fun AnniversaryScreen(
             onSave = { viewModel.updateImportantDate(it); editing = null },
             onDismiss = { editing = null }
         )
+    }
+}
+
+/** 单身状态卡片 */
+@Composable
+private fun SingleAnniversaryCard() {
+    val colors = LocalAppColors.current
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(28.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(colors.gradientPeach.copy(alpha = 0.5f), colors.gradientTaro.copy(alpha = 0.45f))
+                )
+            )
+            .padding(vertical = 26.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("💫", fontSize = 34.sp)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "单身也要好好生活",
+                style = MaterialTheme.typography.titleMedium,
+                color = colors.textPrimary,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "未来的纪念日,等 TA 出现后再一起倒数",
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.textSecondary
+            )
+        }
     }
 }
 

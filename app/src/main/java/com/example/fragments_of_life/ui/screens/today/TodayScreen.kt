@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -91,7 +92,13 @@ fun TodayScreen(
             contentPadding = PaddingValues(bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item { CoupleDaysHeader(coupleInfo, daysTogether, anniversaryToday) }
+            item {
+                if (coupleInfo.hasPartner) {
+                    CoupleDaysHeader(coupleInfo, daysTogether, anniversaryToday)
+                } else {
+                    SingleDaysHeader()
+                }
+            }
 
             item { DailyQuoteCard(quote) }
 
@@ -99,13 +106,15 @@ fun TodayScreen(
                 NextAnniversaryCard(event = nextEvent, today = today)
             }
 
-            // TA的小宇宙:每日一条
-            item {
-                PartnerNoteCard(
-                    note = dailyNote,
-                    onShuffle = { shuffle++ },
-                    onOpenUniverse = onOpenUniverse,
-                )
+            // TA的小宇宙:每日一条(单身时隐藏)
+            if (coupleInfo.hasPartner) {
+                item {
+                    PartnerNoteCard(
+                        note = dailyNote,
+                        onShuffle = { shuffle++ },
+                        onOpenUniverse = onOpenUniverse,
+                    )
+                }
             }
 
             // 那年今日
@@ -130,6 +139,41 @@ fun TodayScreen(
                 }
             }
         }
+    }
+}
+
+/** 顶部:单身状态 */
+@Composable
+private fun SingleDaysHeader() {
+    val colors = LocalAppColors.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 14.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(colors.gradientPeach.copy(alpha = 0.55f), colors.gradientTaro.copy(alpha = 0.45f))
+                )
+            )
+            .padding(vertical = 26.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("🥺", fontSize = 40.sp)
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "目前单身",
+            style = MaterialTheme.typography.titleMedium,
+            color = colors.textPrimary,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "等 TA 出现的那天,去「我们」页填写另一半的信息,开始记录两个人的时光吧 💕",
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.textSecondary,
+            textAlign = TextAlign.Center
+        )
     }
 }
 

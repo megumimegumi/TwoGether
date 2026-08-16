@@ -131,4 +131,6 @@ data class CoupleInfo(
     val partnerPeriodCycleDays: Int = 28,
     val partnerPeriodDuration: Int = 5,
     val partnerPeriodLastStart: LocalDate? = null,
+    /** 是否有另一半(初始化数据后为单身状态) */
+    val hasPartner: Boolean = true,
 )
