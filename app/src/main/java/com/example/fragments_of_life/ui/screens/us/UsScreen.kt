@@ -1,8 +1,11 @@
 package com.example.fragments_of_life.ui.screens.us
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -33,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.example.fragments_of_life.data.local.BackupHelper
 import com.example.fragments_of_life.data.local.CouplePreferences
 import com.example.fragments_of_life.data.model.CoupleInfo
 import com.example.fragments_of_life.data.model.WishItem
@@ -73,9 +77,34 @@ fun UsScreen(
     var showLockSetup by remember { mutableStateOf(false) }
     var resetStep by remember { mutableIntStateOf(0) }   // 0 隐藏;1-3 三步确认
     var showThemePicker by remember { mutableStateOf(false) }
+    var showImportConfirm by remember { mutableStateOf(false) }
+    var showRestartDialog by remember { mutableStateOf(false) }
 
     var remindersEnabled by remember { mutableStateOf(prefs.remindersEnabled) }
     var lockEnabled by remember { mutableStateOf(prefs.lockEnabled) }
+
+    // ── 备份 / 恢复 ──
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        if (uri != null) {
+            val ok = BackupHelper.exportTo(context, uri)
+            Toast.makeText(
+                context,
+                if (ok) "备份成功,已保存到所选位置 💾" else "备份失败,请重试",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            val ok = BackupHelper.importFrom(context, uri)
+            if (ok) showRestartDialog = true
+            else Toast.makeText(context, "恢复失败,请确认选择的是备份 zip 文件", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // 通知权限
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -88,8 +117,12 @@ fun UsScreen(
         }
     }
 
-    BackHandler(enabled = showEditCouple || showLockSetup || showThemePicker || resetStep > 0) {
+    BackHandler(
+        enabled = showEditCouple || showLockSetup || showThemePicker || resetStep > 0 ||
+                showImportConfirm || showRestartDialog
+    ) {
         showEditCouple = false; showLockSetup = false; showThemePicker = false; resetStep = 0
+        showImportConfirm = false; showRestartDialog = false
     }
 
     Column(
@@ -255,6 +288,46 @@ fun UsScreen(
                         )
                     }
 
+                    // 备份与恢复
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(colors.peach.copy(alpha = 0.05f))
+                            .clickable {
+                                val name = "拾光备份_${java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.getDefault()).format(java.util.Date())}.zip"
+                                exportLauncher.launch(name)
+                            }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("📦", fontSize = 18.sp)
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("备份数据", style = MaterialTheme.typography.bodyMedium, color = colors.textPrimary)
+                            Text("把全部数据导出为 zip,换手机时用", style = MaterialTheme.typography.labelSmall, color = colors.textTertiary)
+                        }
+                        Icon(Icons.Default.ChevronRight, null, Modifier.size(16.dp), tint = colors.textTertiary)
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(colors.taro.copy(alpha = 0.06f))
+                            .clickable { showImportConfirm = true }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("📥", fontSize = 18.sp)
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("恢复数据", style = MaterialTheme.typography.bodyMedium, color = colors.textPrimary)
+                            Text("从备份 zip 恢复(会覆盖当前数据)", style = MaterialTheme.typography.labelSmall, color = colors.textTertiary)
+                        }
+                        Icon(Icons.Default.ChevronRight, null, Modifier.size(16.dp), tint = colors.textTertiary)
+                    }
+
                     // 主题配色
                     Row(
                         modifier = Modifier
@@ -407,6 +480,47 @@ fun UsScreen(
         )
     }
 
+    // ── 恢复数据确认 ──
+    if (showImportConfirm) {
+        AlertDialog(
+            onDismissRequest = { showImportConfirm = false },
+            containerColor = colors.card,
+            shape = RoundedCornerShape(24.dp),
+            title = { Text("📥 恢复数据", color = colors.textPrimary, fontWeight = FontWeight.SemiBold) },
+            text = {
+                Text(
+                    "选择备份 zip 文件后,当前数据将被备份内容覆盖。确定要继续吗?",
+                    color = colors.textSecondary
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showImportConfirm = false
+                    importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
+                }) { Text("选择文件", color = colors.rose, fontWeight = FontWeight.SemiBold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImportConfirm = false }) { Text("取消", color = colors.textSecondary) }
+            }
+        )
+    }
+
+    // ── 恢复成功,重启应用 ──
+    if (showRestartDialog) {
+        AlertDialog(
+            onDismissRequest = { },
+            containerColor = colors.card,
+            shape = RoundedCornerShape(24.dp),
+            title = { Text("💾 恢复完成", color = colors.textPrimary, fontWeight = FontWeight.SemiBold) },
+            text = { Text("数据已恢复,需要重启应用才能生效。", color = colors.textSecondary) },
+            confirmButton = {
+                TextButton(onClick = { restartApp(context) }) {
+                    Text("立即重启", color = colors.rose, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        )
+    }
+
     // ── 主题选择 ──
     if (showThemePicker) {
         val setTheme = LocalThemeController.current
@@ -461,6 +575,17 @@ fun UsScreen(
             }
         )
     }
+}
+
+/** 重启应用(恢复数据后调用) */
+private fun restartApp(context: Context) {
+    try {
+        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        context.startActivity(intent)
+    } catch (_: Exception) {
+    }
+    android.os.Process.killProcess(android.os.Process.myPid())
 }
 
 /** 情侣头部卡片(单身时显示单身状态) */
